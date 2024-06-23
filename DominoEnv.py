@@ -37,13 +37,14 @@ class DominoEnv(gym.Env):
         super(DominoEnv, self).__init__()
         self.random = Random()
 
-#         # agent has 7 possible actions, corresponding to the 7 dominos in hand and dominos can be played on either side of board
-#         n_actions = 7
         l_r_side = 2
 #         self.action_space = spaces.MultiDiscrete([n_actions, l_r_side])
 
         #agent chooses domino to play and it's side
         self.action_space = spaces.MultiDiscrete([7,7, l_r_side])
+
+        #for actionspace possplays
+        #self.action_space = spaces.Discrete(14)
         
         #FOR NOW JUST SHOW EDGE DOMINOS!!! (easy temp solution)
         
@@ -69,6 +70,16 @@ class DominoEnv(gym.Env):
 
     def conv_agent_action_to_dom(self, hand, action):
         #convert action to corresponding domino
+        # #CONVERSION FOR POSSPLAYS AS ACTIONSPACE
+        # if(self.board.history != []):
+        #     possiblePlays = DominoGame.possPlays2Flipped(hand, self.board)
+        # else:
+        #     possiblePlays = DominoGame.allPlays(hand)
+        # if(action < len(possiblePlays)):
+        #     return possiblePlays[action]
+        # else:
+        #     return "invalid"
+
         domino = (action[0],action[1])
         #check domino in hand
         if(not (DominoGame.flipIfNeeded(domino) in hand)):
@@ -86,6 +97,12 @@ class DominoEnv(gym.Env):
             possiblePlays = DominoGame.possPlays2Flipped(self.hand1, self.board)
         else:
             possiblePlays = DominoGame.allPlays(self.hand1)
+        
+        # #MASK FOR POSSPLAYS AS ACTIONSPACE
+        # masked_array = np.zeros((1,14))[0]
+        # masked_array[:len(possiblePlays)] = 1
+
+        #for when agent returned a domino+side action
         masked_array = np.zeros((1,16))[0]
         for i in possiblePlays:
             l_side = i[0][0]
@@ -97,20 +114,15 @@ class DominoEnv(gym.Env):
             masked_array[l_side] = 1
             masked_array[r_side+7] = 1
             masked_array[side+14] = 1
-        # print(masked_array)
-        # print(masked_array.shape)
-        # print(self.action_space.sample())
         return masked_array
 
     #if the round is over, but not the game (no winner yet)
     def next_round(self):
-        self.random.seed()
-        self.hand_size = 7
-        self.target_score = 10
         self.board = DominoGame.Board(0, 0, [])
+        self.round_done = False
+        self.invalid_num = 0
 
         self.player_turn = self.random.randrange(2)+1
-        self.played = False
         self.p1_blocked = False
         self.p2_blocked = False
 
@@ -181,15 +193,17 @@ class DominoEnv(gym.Env):
                     possiblePlays = DominoGame.possPlays2Flipped(self.hand1, self.board)
                 else:
                     possiblePlays = DominoGame.allPlays(self.hand1)
-                #check if chosen move is valid and play if it is
-                if((DominoGame.domInHand(move[0], self.hand1)) & (move in possiblePlays)):
+                #check if chosen move is valid and play if it is (dom in hand and in possiblePlays)
+                if((DominoGame.domInHand(DominoGame.flipIfNeeded(move[0]), self.hand1)) and (move in possiblePlays)):
                     DominoGame.playDom(self.player_turn, move[0], self.board, move[1])
                     self.hand1.remove(DominoGame.flipIfNeeded(move[0]))
                     score = DominoGame.scoreBoard(self.board, (bool(self.hand1)))
                     if((self.game_score[0] + score) <= self.target_score):
                         self.game_score[0] += score
-                        reward += score+1
+                        reward += score
                         self.prev_reward = reward
+        
+                    self.player_turn = (self.player_turn % 2) + 1
                     self.p2_blocked = DominoGame.blocked(self.hand2, self.board)
                     if (DominoGame.roundDone(self.game_score, self.target_score, self.p1_blocked, self.p2_blocked)):
                         self.round_done = True
@@ -201,6 +215,7 @@ class DominoEnv(gym.Env):
                         self.board, self.hand2, score = DominoGame.makeMove(DominoGame.randomPlayer, self.player_turn, self.hand2, self.board, self.game_score)
                         if((self.game_score[1] + score) <= self.target_score):
                             self.game_score[1] += score
+                        self.player_turn = (self.player_turn % 2) + 1
                 #rl agent tries doing a move that cannot be done with that domino
                 else:
                     self.invalid_num += 1
@@ -215,6 +230,9 @@ class DominoEnv(gym.Env):
         self.p1_blocked = DominoGame.blocked(self.hand1, self.board)
         self.p2_blocked = DominoGame.blocked(self.hand2, self.board)
 
+        score_difference = self.game_score[0] - self.game_score[1]
+        reward += score_difference
+
         if (DominoGame.roundDone(self.game_score, self.target_score, self.p1_blocked, self.p2_blocked)):
             self.round_done = True
             if(DominoGame.gameDone(self.game_score, self.target_score)):
@@ -228,6 +246,16 @@ class DominoEnv(gym.Env):
         
         #too many invalid moves will exit game
         if(self.invalid_num > 16):
+            # print("hand: ", self.hand1)
+            # print("action: ", action)
+            # print("actionMask: ", self.valid_action_mask())
+            # if(self.board.history != []):
+            #     possiblePlays = DominoGame.possPlays2Flipped(self.hand1, self.board)
+            # else:
+            #     possiblePlays = DominoGame.allPlays(self.hand1)
+            # print("possPlays: ", possiblePlays)
+            # print(self.board.history)
+            # print(self.conv_agent_action_to_dom(self.hand1, action))
             self.done = True
 
         #if round is over but not game, reset board and hands for next round
@@ -235,16 +263,16 @@ class DominoEnv(gym.Env):
             self.next_round()
         
         #if p1 is blocked and the game is not done, call step and it is p2 turn, this is so p1 doesnt needlessly generate
-        #actions that it cannot do while p2 makes its move
+        #actions that it cannot do while p2 makes its move(s)
         if ((self.player_turn == 1) and self.p1_blocked and (not self.round_done) and (not self.p2_blocked)):
             reward -= 1
             self.player_turn = 2
             observation, reward, self.done, truncated, info = self.step(action)
         
-        if(not(self.played) and self.done):
+        if((not self.played) and self.done):
             self.reset()
 
-        info = {"score":self.game_score}
+        info = {"score":self.game_score, "history":self.board.history}
         truncated = False
         reward
 

@@ -1,6 +1,6 @@
 import numpy as np
 import json
-from uteeels import utils
+from utils import utils
 from random import Random
 
 TOTAL_HAND_SIZE = 14

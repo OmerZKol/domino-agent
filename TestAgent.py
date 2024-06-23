@@ -1,23 +1,36 @@
-from stable_baselines3.common.evaluation import evaluate_policy # type: ignore
-from stable_baselines3.common.monitor import Monitor # type: ignore
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.monitor import Monitor
 from DominoEnv import DominoEnv
+from sb3_contrib.common.wrappers import ActionMasker
+from sb3_contrib.common.maskable.utils import get_action_masks
+import gymnasium as gym
+import numpy as np
 from stable_baselines3 import PPO
+from sb3_contrib.ppo_mask import MaskablePPO
+
+def mask_fn(env: gym.Env) -> np.ndarray:
+    return env.valid_action_mask()
 
 #test agent
 def main():
     test_env = DominoEnv()
-    loaded_model = PPO.load("models/V2/1719066465/90000")
-    policy = loaded_model.policy
-    mean_reward, std_reward = evaluate_policy(policy, Monitor(test_env), n_eval_episodes=10, deterministic=True)
+    test_env = ActionMasker(test_env, mask_fn) 
+    #loaded_model = MaskablePPO.load("models/Actionspace_possplays/1719170682/200000")
+    loaded_model = MaskablePPO.load("models/V2/1719158876/490000")
+    # policy = loaded_model.policy
+    # mean_reward, std_reward = evaluate_policy(policy, Monitor(test_env), n_eval_episodes=10, deterministic=True)
 
     scores = []
+    histories = []
     #make agent play 500 games against random player
-    for i in range(10):
+    for i in range(100):
         obs, info = test_env.reset()
-        while(not test_env.done):
-            action, _states = loaded_model.predict(obs)
+        while(not test_env.unwrapped.done):
+            action_masks = get_action_masks(test_env)
+            action, _states = loaded_model.predict(obs, action_masks=action_masks)
             obs, reward, done, trunc, info = test_env.step(action)
         scores.append(info["score"])
+        histories.append(info["history"])
     print(scores)
     overall = [0,0]
     for i in scores:
@@ -26,6 +39,10 @@ def main():
         elif(i[0] < i[1]):
             overall[1] = overall[1]+1
     print(overall)
+    # for i in range(len(histories)):
+        # print(i)
+        # print(scores[i])
+        # print(histories[i])
 
 if __name__ == "__main__":
     main()
