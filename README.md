@@ -4,6 +4,11 @@
 - Training environment made using stable baseline3 and gymnasium 
 - Contains some already trained models and their training logs
 
+## Overall remarks
+- The latest trained model outperforms the random player in the test runs, however the difference is not very great.
+- Looking into difference action space mappings or algorithms could potentially help improve the model.
+- Overall, while the end product is not very impressive, it has learnt from its training runs and I believe it still has room for improvement
+
 ## Contents
 - DominoGame.py contains the Domino Game, can be run to just have 2 players play against eachother (default is a random player)
 - DominoEnv.py Contains the RL training Environment
@@ -20,7 +25,15 @@
 - by default traines model for 500k more steps (unless manually stopped)
 
 ## Installation
-install dependencies using in command line:
+install dependencies using the following in the command line while in the project directory:
 ```bash
 >>> pip install -r requirements.txt
 ``` 
+
+## View Logs
+run
+```bash
+>>> tensorboard --logdir logs
+``` 
+within the project directory and go to the generated localhost page to view the log data for the models
+V2\1719173400\PPO_0 is the most recent (and most trained model)

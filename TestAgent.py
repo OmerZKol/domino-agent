@@ -17,14 +17,15 @@ def main():
     test_env = ActionMasker(test_env, mask_fn) 
     #loaded_model = MaskablePPO.load("models/Actionspace_possplays/1719170682/200000")
     #loaded_model = MaskablePPO.load("models/V2/1719158876/490000") #474, 476
-    loaded_model = MaskablePPO.load("models/V2/1719173400/490000") #target_score 10: 540, 441 #target_score 61: 622, 279
+    #loaded_model = MaskablePPO.load("models/V2/1719173400/490000") #target_score 10: 540, 441 #target_score 61: 622, 279
+    loaded_model = MaskablePPO.load("models/V2/1719173400/990000") #target_score 10: 542, 438 #target_score 61: 644, 248
     # policy = loaded_model.policy
     # mean_reward, std_reward = evaluate_policy(policy, Monitor(test_env), n_eval_episodes=10, deterministic=True)
 
-    target_score = 10
+    target_score = 61
     scores = []
     histories = []
-    #make agent play 500 games against random player
+    #make agent play 1000 games against random player
     for i in range(1000):
         obs, info = test_env.reset()
         while(not test_env.unwrapped.done):
