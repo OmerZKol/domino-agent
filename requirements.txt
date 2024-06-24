@@ -1,0 +1,6 @@
+gymnasium==0.29.1
+numpy==1.24.3
+Pillow==9.4.0
+Pillow==10.3.0
+sb3_contrib==2.3.0
+stable_baselines3==2.3.2
