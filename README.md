@@ -8,6 +8,9 @@
 - The latest trained model outperforms the random player in the test runs, however the difference is not very great.
 - Looking into difference action space mappings or algorithms could potentially help improve the model.
 - Overall, while the end product is not very impressive, it has learnt from its training runs and I believe it still has room for improvement
+- When the most recently trained agent is tested among 1000 games (with invalid games not counting) it gets the following scores against the random player:
+- - with a target_score of 10: 542, 438 (games agent won, games opponent won)
+- - with a target_score 61: 644, 248 (games agent won, games opponent won)
 
 ## Contents
 - DominoGame.py contains the Domino Game, can be run to just have 2 players play against eachother (default is a random player)
